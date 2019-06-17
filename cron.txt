@@ -6,6 +6,7 @@
 # EVERY HOUR TRIGGER
 ################################
 
+
 #hourlyWV
 15 6-19 * 1-12 * java -Dami.config.file=/apporchid/ami_jobs/application-prod.properties -Dami.isLoadHourlyDataWV=true -Dami.isLoadDailyData=false -Dami.isRunHighUsageAlerts=false -Dami.isRunLeakAlerts=false -Dami.isUpdateMeterNextRead=false -Dsun.security.krb5.debug=true -DskipDefaults=false -Dhadoop.home.dir=java.io.tmpdir -Djava.net.debug=true -Djava.security.krb5.conf=/apporchid/ami_jobs/.hive-jdbc-prod/krb5.ini -jar /apporchid/ami_jobs/ami-data.jar >> /apporchid/ami_jobs/logs/crontab.hourlyWV-prod.log 2>&1 &
 

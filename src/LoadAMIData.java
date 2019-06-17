@@ -48,6 +48,7 @@ import com.google.gson.JsonParser;
 
 public class LoadAMIData
 {
+	
   private static String intervalSuffix = "";
 
   private static final String PROGRAM_CONFIGURATION_PROPERTIES_FILE_NAME = System.getProperty("ami.config.file", "application.properties");
