@@ -51,7 +51,6 @@ public class LoadAMIData
   private static String intervalSuffix = "";
 
   private static final String PROGRAM_CONFIGURATION_PROPERTIES_FILE_NAME = System.getProperty("ami.config.file", "application.properties");
-  private static final String CONTENT_TYPE_ALERTS_REST = "application/json; charset=utf-8";
   private static final Boolean IS_LOG_QUERY = Boolean.valueOf(Files.exists(Paths.get("/apporchid/ami_jobs/.debug.ami", new String[0]), new LinkOption[] { LinkOption.NOFOLLOW_LINKS }));
 
   public static Logger logger = Logger.getRootLogger();
@@ -79,9 +78,9 @@ public class LoadAMIData
   private static void initialize()
     throws Exception
   {
-    System.out.println("+===============================================+");
-    System.out.println("+ ami.config.file ==> " + PROGRAM_CONFIGURATION_PROPERTIES_FILE_NAME);
-    System.out.println("+==============================================+");
+    logger.info("+===============================================+");
+    logger.info("+ ami.config.file ==> " + PROGRAM_CONFIGURATION_PROPERTIES_FILE_NAME);
+    logger.info("+==============================================+");
 
     Path path = Paths.get(PROGRAM_CONFIGURATION_PROPERTIES_FILE_NAME, new String[0]);
     Charset charset = StandardCharsets.UTF_8;
@@ -97,7 +96,6 @@ public class LoadAMIData
     }
     try
     {
-      String content;
       applicationConfig = new PropertiesConfiguration(PROGRAM_CONFIGURATION_PROPERTIES_FILE_NAME);
       logger.info("This program will try to connect to the source cluster =>" + applicationConfig.getString("ami.pipelines.config.hive_clusterName"));
 
@@ -140,17 +138,7 @@ public class LoadAMIData
   {
     return applicationConfig.getString(c.getKey());
   }
-
-  public static void maina(String[] args)
-    throws Exception
-  {
-    System.out.println(String.format("alerts audit (true) t=%s | r=%s | ri=%s | ei1=%s | ei2=%s | ei3=%s ", new Object[] { "foo", "bar", "tom", "dick", "hary", "tony" }));
-
-    System.out.println(getConfigValue(ApplicationConfig.APP_CONFIG_HIVE_JDBC_URI));
-    System.out.println("jdbc:hive2://hsynlhdps202.amwaternp.net:2181,hsynlhdps200.amwaternp.net:2181,hsynlhdps201.amwaternp.net:2181/;serviceDiscoveryMode=zooKeeper;zooKeeperNamespace=hiveserver2-hive2".matches(getConfigValue(ApplicationConfig.APP_CONFIG_HIVE_JDBC_URI)));
-    System.out.println("jdbc:hive2://staplhdpsm002.amwater.net:2181,staplhdpsm005.amwater.net:2181,staplhdpsm006.amwater.net:2181,staplhdpsm003.amwater.net:2181,staplhdpsm004.amwater.net:2181/;serviceDiscoveryMode=zooKeeper;zooKeeperNamespace=hiveserver2-hive2".matches(getConfigValue(ApplicationConfig.APP_CONFIG_HIVE_JDBC_URI)));
-  }
-
+  
   public static void main(String[] args) throws Exception
   {
     System.setProperty("java.net.debug", "true");
@@ -206,15 +194,15 @@ public class LoadAMIData
     }
 
     if (isRunUsagePrediction) {
-      System.out.println("Running Usage Prediction Algorithm begin at " + LocalDateTime.now());
+      logger.info("Running Usage Prediction Algorithm begin at " + LocalDateTime.now());
       double zScore = Double.parseDouble(getConfigValue(ApplicationConfig.APP_CONFIG_USAGE_PREDICTION_ZEE_SCORE_SIGMA));
 
       updateUsagePrediction(pgConn, Double.valueOf(zScore));
-      System.out.println("Running Usage Prediction Algorithm ends at " + LocalDateTime.now());
+      logger.info("Running Usage Prediction Algorithm ends at " + LocalDateTime.now());
     }
 
     if (runHighUsageAlerts) {
-      System.out.println("High Usage Calculation started at " + new Date());
+      logger.info("High Usage Calculation started at " + new Date());
       double zScore = 
         Double.parseDouble(getConfigValue(ApplicationConfig.APP_CONFIG_HIGHUSAGEALERT_ZEE_SCORE_SIGMA));
       int numOfPastMonths = 
@@ -225,7 +213,7 @@ public class LoadAMIData
     }
 
     if (runLeakAlerts) {
-      System.out.println("Leaks Calculation started at" + new Date());
+      logger.info("Leaks Calculation started at" + new Date());
       int intervalHours = Integer.parseInt(getConfigValue(ApplicationConfig.APP_CONFIG_LEAKALERT_INTERVALHOURS));
       int minimumConsumption = Integer.parseInt(getConfigValue(ApplicationConfig.APP_CONFIG_LEAKALERT_MINIMUMCONSUMPTION));
       getLeaks(pgConn, intervalHours, minimumConsumption);
@@ -256,7 +244,7 @@ public class LoadAMIData
     while (rs2.next()) {
       String businessPartner = rs2.getString(1);
       String contractAccount = rs2.getString(2);
-      System.out.println(businessPartner + "," + contractAccount);
+      logger.info(businessPartner + "," + contractAccount);
       String apiUrl = getConfigValue(ApplicationConfig.APP_CONFIG_LEAKALERT_ENDPOINT_URL);
       callLeaksRESTService(pgConn, apiUrl, AccionPayloadAmi.build(businessPartner, contractAccount), token);
     }
@@ -278,7 +266,6 @@ public class LoadAMIData
 
     debugQuery(highUsageSQL);
     ResultSet rs2 = pgConn.createStatement().executeQuery(highUsageSQL);
-    System.out.println("retrieved data");
     String token = getSecureAuthToken();
 
     while (rs2.next()) {
@@ -288,7 +275,7 @@ public class LoadAMIData
       Timestamp lastReadTime = rs2.getTimestamp(4);
       Double currentUsage = Double.valueOf(rs2.getDouble(5));
       Double highUsageLimit = Double.valueOf(rs2.getDouble(6));
-      System.out.println(businessPartner + "," + contractAccount + "," + equipmentNumber + "," + lastReadTime + "," + currentUsage + "," + highUsageLimit);
+      logger.info(businessPartner + "," + contractAccount + "," + equipmentNumber + "," + lastReadTime + "," + currentUsage + "," + highUsageLimit);
       String apiUrl = getConfigValue(ApplicationConfig.APP_CONFIG_HIGHUSAGEALERT_ENDPOINT_URL);
       callHighUsageRESTService(pgConn, apiUrl, AccionPayloadAmi.build(businessPartner, contractAccount), token, equipmentNumber, lastReadTime, currentUsage, highUsageLimit);
     }
@@ -452,11 +439,6 @@ public class LoadAMIData
     int count = 0;
     if (sourceResultSet.next())
     {
-      //String deleteSQL = "delete from app.meter_ami_reads where read_interval_type = '" + readIntervalType + "'";
-      //debugQuery(deleteSQL);
-
-      //pgConn.createStatement().executeUpdate(deleteSQL);
-
       String insertSQL = "INSERT INTO app.meter_ami_reads(             read_interval_type, headend_meter_id, functionallocation, reading_datetime,              timezone, reading_value, unit_of_measure, consumption, read_interval,              equipmentnumber, installation, register, logicalregisternumber,              businesspartnernumber, contractaccount, contract, district)     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
       debugQuery(insertSQL);
       PreparedStatement pstmt = pgConn.prepareStatement(insertSQL);
@@ -485,9 +467,9 @@ public class LoadAMIData
       }while (sourceResultSet.next());
       pstmt.executeBatch();
     } else {
-      System.out.println("Skipping. ResultSet was empty - at " + new Date() + " \treadIntervalType=" + readIntervalType);
+      logger.info("Skipping. ResultSet was empty - at " + new Date() + " \treadIntervalType=" + readIntervalType);
     }
-    System.out.println("Inserted " + count + " rows");
+    logger.info("Inserted " + count + " rows "+getTime());
   }
 
   private static void updateAMIDataWV(String readIntervalType, Connection pgConn, ResultSet sourceResultSet) throws SQLException {
@@ -570,7 +552,7 @@ public class LoadAMIData
       count++;
     }
     pstmt.executeBatch();
-    System.out.println("meter_ami_projected_consumption: Inserted " + count + " rows");
+    logger.info("meter_ami_projected_consumption: Inserted " + count + " rows"+getTime());
 
     sourceResultSet.close();
   }
@@ -617,34 +599,6 @@ public class LoadAMIData
     return null;
   }
 
-  /*private static void updateMeterNextRead(Connection hiveConn, Connection pgConn) throws SQLException
-  {
-    String insertSQL = "INSERT INTO app.meter_next_read(meter_reading_unit, next_read_date)  VALUES (?, ?)";
-    String readDateSQL = "select meterreadingunit,min(scheduledmeterreadingdate) next_read_date from awinternal.meterreadingunitschedulerecord  where scheduledmeterreadingdate >= current_date() group by meterreadingunit ";
-
-    debugQuery(readDateSQL);
-    ResultSet sourceResultSet = hiveConn.createStatement().executeQuery(readDateSQL);
-
-    String deleteSQL = "delete from app.meter_next_read";
-    debugQuery(deleteSQL);
-    pgConn.createStatement().executeUpdate(deleteSQL);
-
-    debugQuery(insertSQL);
-    PreparedStatement pstmt = pgConn.prepareStatement(insertSQL);
-    int count = 0;
-    while (sourceResultSet.next()) {
-      pstmt.setString(1, sourceResultSet.getString(1));
-      pstmt.setDate(2, sourceResultSet.getDate(2));
-      pstmt.addBatch();
-      count++;
-    }
-
-    pstmt.executeBatch();
-    System.out.println("updateMeterNextRead: Inserted " + count + " rows");
-    sourceResultSet.close();
-  }
-*/
-  
   private static void updateMeterNextRead(Connection hiveConn, Connection pgConn) throws SQLException
   {
     String insertSQL = "INSERT INTO app.meter_next_read(meter_reading_unit, next_read_date)  VALUES (?, ?)";
