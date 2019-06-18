@@ -251,7 +251,7 @@ public class LoadAMIData
     }
   }
 
-  private static String getCountiesListSQLString() {
+  /*private static String getCountiesListSQLString() {
     StringBuffer result = new StringBuffer("");
 
     for (String county : getConfigValue(ApplicationConfig.APP_CONFIG_COUNTIES_LIST).split(",")) {
@@ -259,10 +259,10 @@ public class LoadAMIData
     }
     return StringUtils.chop(result.toString());
   }
-
+*/
   private static void getHighUsage(Connection pgConn, double zScore, int numOfPastMonths, int minimumUsage) throws Exception
   {
-    String highUsageSQL = "SELECT mar.businesspartnernumber, mar.contractaccount, trim(leading '0' FROM mar.equipmentnumber) , mr2.last_read_time, sum(mar.consumption), ami_calc.high_usage_limit FROM app.meter_ami_reads mar JOIN ( SELECT mv2.meter_id, mv2.business_partner_number, mv2.connection_contract_number, max(meter_reading_time) last_read_time FROM app.meter_readings_v2 mr2 JOIN app.meters_v2 mv2 ON mv2.meter_id = mr2.meter_id AND mv2.installation = mr2.installation AND mv2.register = mr2.register AND mv2.isactive = 'Yes' AND district IN ('CA0520', 'CA0560') AND meter_reading_reason = '01' AND end_point_type_1 = '20' GROUP BY mv2.meter_id, mv2.business_partner_number, mv2.connection_contract_number) mr2 ON mr2.meter_id = trim(leading '0' FROM mar.equipmentnumber) AND mr2.business_partner_number = mar.businesspartnernumber AND mr2.connection_contract_number = mar.contractaccount JOIN ( SELECT mv2.meter_id, mv2.register, mv2.business_partner_number, mv2.connection_contract_number, sum(consumption_gl) total_consumption, round(avg(consumption_gl):: numeric,2) avg_consumption, round(stddev_pop(consumption_gl):: numeric,2) std_dev_consumption, round((avg(consumption_gl)+2.5*stddev_pop(consumption_gl))::numeric,2) high_usage_limit, extract( day FROM max(meter_reading_time) - min(meter_reading_time)) total_days, sum(consumption_gl)/extract( day FROM max(meter_reading_time) - min(meter_reading_time)) per_day_consumption, min(meter_reading_time) start_date, max(meter_reading_time) end_date, mnr.next_read_date FROM app.meter_readings_v2 mr2 JOIN app.meters_v2 mv2 ON mv2.meter_id = mr2.meter_id AND mv2.installation = mr2.installation AND mv2.register = mr2.register AND mv2.isactive = 'Yes' AND district IN ('CA0520', 'CA0560') AND meter_reading_reason = '01' AND end_point_type_1 = '20' AND meter_reading_time > CURRENT_TIMESTAMP - interval '15 month' JOIN app.meter_next_read mnr ON mnr.meter_reading_unit = mr2.meter_reading_unit GROUP BY mv2.meter_id, mv2.register, mv2.business_partner_number, mv2.connection_contract_number, mnr.next_read_date) ami_calc ON ami_calc.meter_id = trim(leading '0' FROM mar.equipmentnumber) AND ami_calc.business_partner_number = mar.businesspartnernumber AND ami_calc.connection_contract_number = mar.contractaccount WHERE mar.read_interval_type = 'DAILY' AND mar.reading_datetime > mr2.last_read_time GROUP BY mar.businesspartnernumber, mar.contractaccount, mar.equipmentnumber, mr2.last_read_time, ami_calc.high_usage_limit HAVING ami_calc.high_usage_limit < sum(mar.consumption) AND sum(mar.consumption) > 3000";
+    String highUsageSQL = "SELECT mar.businesspartnernumber, mar.contractaccount, trim(leading '0' FROM mar.equipmentnumber) , mr2.last_read_time, sum(mar.consumption), ami_calc.high_usage_limit FROM app.meter_ami_reads mar JOIN ( SELECT mv2.meter_id, mv2.business_partner_number, mv2.connection_contract_number, max(meter_reading_time) last_read_time FROM app.meter_readings_v2 mr2 JOIN app.meters_v2 mv2 ON mv2.meter_id = mr2.meter_id AND mv2.installation = mr2.installation AND mv2.register = mr2.register AND mv2.isactive = 'Yes' AND meter_reading_reason = '01' AND end_point_type_1 = '20' GROUP BY mv2.meter_id, mv2.business_partner_number, mv2.connection_contract_number) mr2 ON mr2.meter_id = trim(leading '0' FROM mar.equipmentnumber) AND mr2.business_partner_number = mar.businesspartnernumber AND mr2.connection_contract_number = mar.contractaccount JOIN ( SELECT mv2.meter_id, mv2.register, mv2.business_partner_number, mv2.connection_contract_number, sum(consumption_gl) total_consumption, round(avg(consumption_gl):: numeric,2) avg_consumption, round(stddev_pop(consumption_gl):: numeric,2) std_dev_consumption, round((avg(consumption_gl)+2.5*stddev_pop(consumption_gl))::numeric,2) high_usage_limit, extract( day FROM max(meter_reading_time) - min(meter_reading_time)) total_days, sum(consumption_gl)/extract( day FROM max(meter_reading_time) - min(meter_reading_time)) per_day_consumption, min(meter_reading_time) start_date, max(meter_reading_time) end_date, mnr.next_read_date FROM app.meter_readings_v2 mr2 JOIN app.meters_v2 mv2 ON mv2.meter_id = mr2.meter_id AND mv2.installation = mr2.installation AND mv2.register = mr2.register AND mv2.isactive = 'Yes' meter_reading_reason = '01' AND end_point_type_1 = '20' AND meter_reading_time > CURRENT_TIMESTAMP - interval '15 month' JOIN app.meter_next_read mnr ON mnr.meter_reading_unit = mr2.meter_reading_unit GROUP BY mv2.meter_id, mv2.register, mv2.business_partner_number, mv2.connection_contract_number, mnr.next_read_date) ami_calc ON ami_calc.meter_id = trim(leading '0' FROM mar.equipmentnumber) AND ami_calc.business_partner_number = mar.businesspartnernumber AND ami_calc.connection_contract_number = mar.contractaccount WHERE mar.read_interval_type = 'DAILY' AND mar.reading_datetime > mr2.last_read_time GROUP BY mar.businesspartnernumber, mar.contractaccount, mar.equipmentnumber, mr2.last_read_time, ami_calc.high_usage_limit HAVING ami_calc.high_usage_limit < sum(mar.consumption) AND sum(mar.consumption) > 3000";
     logger.debug(BasicFormatterImpl.format(highUsageSQL));
 
     debugQuery(highUsageSQL);
@@ -322,7 +322,6 @@ public class LoadAMIData
       "              and current_date between cmd.devicevaliditystartdate and cmd.devicevalidityenddate " + 
       "              and current_date between cmd.utilitiesmoveindate  and cmd.utilitiesmoveoutdate " + 
       "              and imd.register = cmd.register " + 
-      "              and cmd.regionalstructuregrouping  in (" + getCountiesListSQLString() + ") " + 
       "        order by headend_meter_id, reading_datetime , imd.register ";
 
     debugQuery(hourlySQL);
@@ -396,8 +395,7 @@ public class LoadAMIData
       "inner join cloudseer.mv2_temp cmd on  cmd.equipmentnumber =imd.equipmentnumber " + 
       "      and current_date between cmd.devicevaliditystartdate and cmd.devicevalidityenddate " + 
       "      and current_date between cmd.utilitiesmoveindate and cmd.utilitiesmoveoutdate " + 
-      "      and imd.register = cmd.register " + 
-      "      and cmd.regionalstructuregrouping in (" + getCountiesListSQLString() + ") " + 
+      "      and imd.register = cmd.register " +  
       "order by headend_meter_id, reading_datetime , imd.register ";
 
     debugQuery(sql);
