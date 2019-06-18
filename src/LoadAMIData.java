@@ -589,7 +589,6 @@ public class LoadAMIData
   private static Connection getPostgresConnection(String jdbcUrl, String uid, String pwd) throws SQLException {
     try {
       Class.forName("org.postgresql.Driver");
-      Connection connection = null;
       return DriverManager.getConnection(jdbcUrl, uid, pwd);
     }
     catch (ClassNotFoundException e) {
@@ -632,7 +631,7 @@ public class LoadAMIData
     try
     {
       String secureAuthTokenUrl = getConfigValue(ApplicationConfig.AMI_SECUREAUTH_CONFIG_OAUTH_URL);
-      List paramList = new ArrayList();
+      List<BasicNameValuePair> paramList = new ArrayList<>();
 
       paramList.add(new BasicNameValuePair(LoadAMIData.SecureAuthParam.grant_type.name(), getConfigValue(ApplicationConfig.AMI_SECUREAUTH_CONFIG_GRANT_TYPE)));
       paramList.add(new BasicNameValuePair(LoadAMIData.SecureAuthParam.username.name(), getConfigValue(ApplicationConfig.AMI_SECUREAUTH_CONFIG_USERNAME)));
